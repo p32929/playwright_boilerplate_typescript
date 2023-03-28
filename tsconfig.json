@@ -8,7 +8,7 @@
     "esModuleInterop": true,
     "strictNullChecks": false,
     "noImplicitAny": false,
-    "lib": ["ES2021.String"]
+    "lib": ["ES2021.String", "dom"]
   },
   "exclude": ["./node_modules"]
 }
