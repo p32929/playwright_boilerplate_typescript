@@ -15,7 +15,7 @@ const defaultValues: IBrowserOptions = {
     mode: "sessioned",
     sessionPath: `./data/sessions/`,
     timeout: 1000 * 60 * 5,
-    browser: "chrome"
+    browser: "firefox"
 }
 
 //
@@ -26,6 +26,7 @@ var isCreatingSessionedContext = false
 var privateBrowser: Browser = null
 var privatecontext: BrowserContext = null
 var privatePages: Page[] = []
+var isCreatingPrivateContext = false
 
 //
 export class Chrome {
@@ -51,11 +52,11 @@ export class Chrome {
     }
 
     async getNewPage() {
-        if (this.options.mode == "sessioned") {
-            if (isCreatingSessionedContext) {
-                await Utils.delay(5000)
-            }
+        if (isCreatingSessionedContext || isCreatingPrivateContext) {
+            await Utils.delay(5000)
+        }
 
+        if (this.options.mode == "sessioned") {
             if (sessionedcontext === null) {
                 isCreatingSessionedContext = true
                 this.context = sessionedcontext = await this.getBrowser().launchPersistentContext(
@@ -75,6 +76,7 @@ export class Chrome {
         }
         else if (this.options.mode == "private") {
             if (privateBrowser === null || privatecontext === null) {
+                isCreatingPrivateContext = true
                 this.browser = privateBrowser = await this.getBrowser().launch({
                     headless: Constants.IS_HEADLESS,
                     timeout: this.options.timeout
@@ -83,6 +85,7 @@ export class Chrome {
 
                 this.context.setDefaultNavigationTimeout(this.options.timeout)
                 this.context.setDefaultTimeout(this.options.timeout)
+                isCreatingPrivateContext = false
             }
 
             this.page = await privatecontext.newPage();
