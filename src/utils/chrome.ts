@@ -215,8 +215,9 @@ export class Chrome {
                     // @ts-ignore
                     if (elems[i].innerText.toLowerCase().includes(obj.elementText.toLowerCase())) {
                         // @ts-ignore
-                        elems[i].click()
-
+                        elems[i]?.focus()
+                        // @ts-ignore
+                        elems[i]?.click()
                         break
                     }
                 }
@@ -237,9 +238,9 @@ export class Chrome {
                     // @ts-ignore
                     if (elems[i].innerText.toLowerCase() === obj.elementText.toLowerCase()) {
                         // @ts-ignore
-                        elems[i].focus()
+                        elems[i]?.focus()
                         // @ts-ignore
-                        elems[i].click()
+                        elems[i]?.click()
                         return true
                     }
                 }
@@ -262,7 +263,9 @@ export class Chrome {
                     // @ts-ignore
                     if (elems[i].innerText.toLowerCase() === obj.elementText.toLowerCase()) {
                         // @ts-ignore
-                        elems[i].click()
+                        elems[i]?.focus()
+                        // @ts-ignore
+                        elems[i]?.click()
                         break
                     }
                 }
