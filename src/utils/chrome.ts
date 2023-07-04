@@ -213,7 +213,7 @@ export class Chrome {
                 var elems = document.getElementsByTagName(obj.elementTag)
                 for (var i = 0; i < elems.length; i++) {
                     // @ts-ignore
-                    if (elems[i].innerText.includes(obj.elementText)) {
+                    if (elems[i].innerText.toLowerCase().includes(obj.elementText.toLowerCase())) {
                         // @ts-ignore
                         elems[i].click()
 
@@ -235,7 +235,7 @@ export class Chrome {
                 var elems = document.getElementsByTagName(obj.elementTag)
                 for (var i = 0; i < elems.length; i++) {
                     // @ts-ignore
-                    if (elems[i].innerText === obj.elementText) {
+                    if (elems[i].innerText.toLowerCase() === obj.elementText.toLowerCase()) {
                         // @ts-ignore
                         elems[i].focus()
                         // @ts-ignore
@@ -260,7 +260,7 @@ export class Chrome {
                 var elems = document.getElementsByClassName(obj.elementTag)
                 for (var i = 0; i < elems.length; i++) {
                     // @ts-ignore
-                    if (elems[i].innerText === obj.elementText) {
+                    if (elems[i].innerText.toLowerCase() === obj.elementText.toLowerCase()) {
                         // @ts-ignore
                         elems[i].click()
                         break
