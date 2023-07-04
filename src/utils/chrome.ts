@@ -1,5 +1,6 @@
 import { chromium, Page, firefox, BrowserType, BrowserContext, Browser } from "playwright";
 import { Constants } from "./constants";
+import { Utils } from "./utils";
 
 type BrowserTypes = "chrome" | "firefox"
 
@@ -20,8 +21,9 @@ const defaultValues: IBrowserOptions = {
 //
 var sessionedcontext: BrowserContext = null
 var sessionedPages: Page[] = []
+var isCreatingSessionedContext = false
 //
-var privateBrowser: Browser = null 
+var privateBrowser: Browser = null
 var privatecontext: BrowserContext = null
 var privatePages: Page[] = []
 
@@ -50,14 +52,21 @@ export class Chrome {
 
     async getNewPage() {
         if (this.options.mode == "sessioned") {
+            if (isCreatingSessionedContext) {
+                await Utils.delay(5000)
+            }
+
             if (sessionedcontext === null) {
-                this.context = sessionedcontext = await this.getBrowser().launchPersistentContext(this.options.sessionPath, {
+                isCreatingSessionedContext = true
+                this.context = sessionedcontext = await this.getBrowser().launchPersistentContext(
+                    this.options.sessionPath, {
                     headless: Constants.IS_HEADLESS,
                     timeout: this.options.timeout
                 })
 
                 this.context.setDefaultNavigationTimeout(this.options.timeout)
                 this.context.setDefaultTimeout(this.options.timeout)
+                isCreatingSessionedContext = false
             }
 
             this.page = await sessionedcontext.newPage();
