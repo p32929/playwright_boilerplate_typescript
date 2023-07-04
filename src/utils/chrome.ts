@@ -11,19 +11,19 @@ interface IBrowserOptions {
 }
 
 const defaultValues: IBrowserOptions = {
-    mode: "private",
+    mode: "sessioned",
     sessionPath: `./data/sessions/`,
     timeout: 1000 * 60 * 5,
-    browser: "firefox"
+    browser: "chrome"
 }
 
 //
-let sessionedcontext: BrowserContext = null
-let sessionedPages: Page[] = []
+var sessionedcontext: BrowserContext = null
+var sessionedPages: Page[] = []
 //
-let privateBrowser: Browser = null
-let privatecontext: BrowserContext = null
-let privatePages: Page[] = []
+var privateBrowser: Browser = null 
+var privatecontext: BrowserContext = null
+var privatePages: Page[] = []
 
 //
 export class Chrome {
@@ -83,25 +83,35 @@ export class Chrome {
     }
 
     private static async destroyPrivate() {
-        for (var i = 0; i < privatePages.length; i++) {
-            await privatePages[i].close()
-        }
+        try {
+            for (var i = 0; i < privatePages.length; i++) {
+                await privatePages[i].close()
+            }
 
-        const contexts = privateBrowser.contexts()
-        for (var i = 0; i < contexts.length; i++) {
-            await contexts[i].close()
+            const contexts = privateBrowser.contexts()
+            for (var i = 0; i < contexts.length; i++) {
+                await contexts[i].close()
+            }
+            await privateBrowser.close()
         }
-        await privateBrowser.close()
+        catch (e) {
+            //
+        }
     }
 
     private static async destroySessioned() {
-        for (var i = 0; i < sessionedPages.length; i++) {
-            await sessionedPages[i].close()
+        try {
+            for (var i = 0; i < sessionedPages.length; i++) {
+                await sessionedPages[i].close()
+            }
+            await sessionedcontext.close()
         }
-        await sessionedcontext.close()
+        catch (e) {
+            //
+        }
     }
 
-    static async destroy(dtype: "all" | "private" | "public") {
+    static async destroy(dtype: "all" | "private" | "public" = "all") {
         switch (dtype) {
             case "all":
                 await this.destroyPrivate()
