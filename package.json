@@ -9,8 +9,7 @@
     "typescript": "^5.1.6"
   },
   "scripts": {
-    "start": "nodemon ./src/main.ts",
-    "dummy": "nodemon ./src/dummy/chrome_tests.ts"
+    "start": "nodemon ./src/main.ts"
   },
   "dependencies": {
     "console-stamp": "^3.1.1",

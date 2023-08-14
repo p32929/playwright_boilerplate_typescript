@@ -1,4 +1,4 @@
-import { chromium, Page, firefox, BrowserType, BrowserContext, Browser } from "playwright";
+import { chromium, Page, firefox, BrowserType, BrowserContext } from "playwright";
 import { Constants } from "./constants";
 import { Utils } from "./utils";
 
@@ -20,53 +20,20 @@ const defaultValues: IBrowserOptions = {
     mute: true
 }
 
-const FIVE_SECONDS = 5000
-const TEN_SECONDS = 10000
-//
-var sessionedcontext: BrowserContext = null
-var sessionedPages: Page[] = []
-//
-var privateBrowser: Browser = null
-var privatecontext: BrowserContext = null
-var privatePages: Page[] = []
-//
-const creationTimes: Date[] = []
-let pageNumGlobal = 0
-//
-let prevPageNum = 0
-let samePageNumTimes = 0
-
 //
 export class Chrome {
     private options: IBrowserOptions = defaultValues
     private page: Page = null
     private context: BrowserContext = null
-    private browser: Browser = null
+    private isInitting = false
+    private openedPages: number = 0
+    private tryingToOpenPages: number = 0
 
     constructor(options: Partial<IBrowserOptions> = defaultValues) {
         this.options = {
             ...defaultValues,
             ...options,
         }
-
-        setInterval(() => {
-            if (samePageNumTimes > 3) {
-                pageNumGlobal = 0
-                samePageNumTimes = 0
-                prevPageNum = 0
-            }
-
-            if (pageNumGlobal === prevPageNum) {
-                samePageNumTimes++
-            }
-            else {
-                samePageNumTimes = 0
-                prevPageNum = pageNumGlobal
-            }
-            
-            console.log(`chrome.ts :: Chrome :: setInterval :: samePageNumTimes -> ${samePageNumTimes} , pageNumGlobal -> ${pageNumGlobal} , prevPageNum -> ${prevPageNum} `)
-
-        }, 1000 * 20)
     }
 
     private getBrowser(): BrowserType<{}> {
@@ -80,33 +47,19 @@ export class Chrome {
     }
 
     async getNewPage() {
-        const pageNumber = (++pageNumGlobal)
-        console.log(`chrome.ts :: Chrome :: getNewPage :: pageNumber: ${pageNumber}`)
-        await Utils.delay(pageNumber * 1000)
+        console.log(`chrome.ts :: Chrome :: getNewPage :: this.openedPages -> ${this.openedPages} , this.context.pages().length -> ${this?.context?.pages().length} `)
 
-        if (creationTimes.length === 0) {
-            creationTimes.push(new Date())
+        while (this.isInitting) {
+            console.log(`chrome.ts :: Chrome :: getNewPage :: this.isInitting -> ${this.isInitting} `)
+            await Utils.delay(2000)
         }
-        else {
-            const prev = creationTimes[creationTimes.length - 1]
-            const nextTime = new Date(prev.getTime() + TEN_SECONDS)
-            creationTimes.push(nextTime)
-            const currentTime = new Date()
+        console.log(`chrome.ts :: Chrome :: getNewPage :: this.isInitting -> ${this.isInitting} `)
 
-            // @ts-ignore
-            const diff = nextTime - currentTime
-            // console.log(`chrome.ts :: Chrome :: getNewPage :: diff -> ${diff} `)
+        if (this.isInitting === false && this.context === null) {
+            this.isInitting = true
 
-            if (diff > 0) {
-                console.log(`chrome.ts :: Chrome :: getNewPage :: Delaying ${Math.floor(diff / 1000)}s for page ${pageNumber}`)
-                await Utils.delay(diff)
-            }
-        }
-
-        console.log(`chrome.ts :: Chrome :: getNewPage :: page ${pageNumber} Opening...`)
-        if (this.options.mode == "sessioned") {
-            if (sessionedcontext === null) {
-                this.context = sessionedcontext = await this.getBrowser().launchPersistentContext(
+            if (this.options.mode == "sessioned") {
+                this.context = await this.getBrowser().launchPersistentContext(
                     this.options.sessionPath, {
                     headless: Constants.IS_HEADLESS,
                     timeout: this.options.timeout,
@@ -115,70 +68,43 @@ export class Chrome {
                 this.context.setDefaultNavigationTimeout(this.options.timeout)
                 this.context.setDefaultTimeout(this.options.timeout)
             }
-
-            this.page = await sessionedcontext.newPage();
-            sessionedPages.push(this.page)
-            return this.page
-        }
-        else if (this.options.mode == "private") {
-            if (privateBrowser === null || privatecontext === null) {
-                this.browser = privateBrowser = await this.getBrowser().launch({
+            else if (this.options.mode == "private") {
+                const browser = await this.getBrowser().launch({
                     headless: Constants.IS_HEADLESS,
                     timeout: this.options.timeout
                 });
-                this.context = privatecontext = await this.browser.newContext()
+                this.context = await browser.newContext()
 
                 this.context.setDefaultNavigationTimeout(this.options.timeout)
                 this.context.setDefaultTimeout(this.options.timeout)
             }
 
-            this.page = await privatecontext.newPage();
-            privatePages.push(this.page)
-            return this.page
+            this.isInitting = false 
         }
+
+        console.log(`chrome.ts :: Chrome :: getNewPage-1 :: this.tryingToOpenPages -> ${this.tryingToOpenPages} , this.openedPages -> ${this.openedPages} `)
+        while (this.tryingToOpenPages !== this.openedPages) {
+            await Utils.delay(2000)
+            console.log(`chrome.ts :: Chrome :: getNewPage-1 :: this.tryingToOpenPages -> ${this.tryingToOpenPages} , this.openedPages -> ${this.openedPages} `)
+        }
+
+        this.tryingToOpenPages++
+        this.page = await this.context.newPage();
+        this.openedPages++
+
+        return this.page
     }
 
-    private static async destroyPrivate() {
-        console.log(`chrome.ts :: Chrome :: destroyPrivate :: `)
+    async destroy() {
         try {
-            for (var i = 0; i < privatePages.length; i++) {
-                await privatePages[i].close()
+            const pages = this.context.pages()
+            for (var i = 0; i < pages.length; i++) {
+                await pages[i].close()
             }
-
-            const contexts = privateBrowser.contexts()
-            for (var i = 0; i < contexts.length; i++) {
-                await contexts[i].close()
-            }
-            await privateBrowser.close()
+            await this.context.close()
         }
         catch (e) {
             //
-        }
-    }
-
-    private static async destroySessioned() {
-        console.log(`chrome.ts :: Chrome :: destroySessioned :: `)
-        try {
-            for (var i = 0; i < sessionedPages.length; i++) {
-                await sessionedPages[i].close()
-            }
-            await sessionedcontext.close()
-        }
-        catch (e) {
-            //
-        }
-    }
-
-    static async destroy(dtype: "all" | "private" | "public" = "all") {
-        console.log(`chrome.ts :: Chrome :: destroy :: dtype -> ${dtype} `)
-        switch (dtype) {
-            case "all":
-                await this.destroyPrivate()
-                await this.destroySessioned()
-            case "private":
-                await this.destroyPrivate()
-            case "public":
-                await this.destroySessioned()
         }
     }
 
@@ -372,9 +298,14 @@ export class Chrome {
         await page.waitForTimeout(Constants.defaultWaitMs)
     }
 
-    static gotoForce = async (page: Page, url: string, retryCount: number = 5) => {
+    static gotoForce = async (page: Page, url: string, retryCount: number = 20) => {
         if (retryCount < 0) {
-            throw new Error(`Failed to navigate to ${url} after 3 retries.`);
+            console.log(`Failed to navigate to ${url} after ${retryCount} retries.`)
+
+            // Crashing the process forcefully
+            // @ts-ignore
+            abcdefghijklmnopqrstuvwxyz = 0
+
         }
         await Promise.all([
             page.goto(url, {
@@ -386,4 +317,20 @@ export class Chrome {
             this.gotoForce(page, url, retryCount - 1);
         });
     };
+
+    static async scrollDown(page: Page, nTimes: number = 10, wait: number = Constants.defaultWaitMs) {
+        for (var i = 0; i < nTimes; i++) {
+            await page.evaluate(() => {
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+            })
+            await page.waitForTimeout(wait)
+        }
+    }
+
+    static async getCurrentPageUrl(page: Page) {
+        const currentLocation = await page.evaluate(() => {
+            return window.location.href
+        })
+        return currentLocation
+    }
 }
