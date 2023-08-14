@@ -20,6 +20,8 @@ const defaultValues: IBrowserOptions = {
     mute: true
 }
 
+let isOpeningUrl = false
+
 //
 export class Chrome {
     private options: IBrowserOptions = defaultValues
@@ -79,7 +81,7 @@ export class Chrome {
                 this.context.setDefaultTimeout(this.options.timeout)
             }
 
-            this.isInitting = false 
+            this.isInitting = false
         }
 
         console.log(`chrome.ts :: Chrome :: getNewPage-1 :: this.tryingToOpenPages -> ${this.tryingToOpenPages} , this.openedPages -> ${this.openedPages} `)
@@ -287,35 +289,48 @@ export class Chrome {
         await page.waitForTimeout(Constants.defaultWaitMs)
     }
 
-    static async gotoUrlIfNeeded(page: Page, url: string) {
+    static gotoForce = async (page: Page, url: string, retryCount: number = 20) => {
         const currentLocation = await page.evaluate(() => {
             return window.location.href
         })
 
-        if (currentLocation !== url) {
-            await this.gotoForce(page, url)
+        if (currentLocation === url) {
+            await page.waitForTimeout(Constants.defaultWaitMs)
+            return
         }
-        await page.waitForTimeout(Constants.defaultWaitMs)
-    }
 
-    static gotoForce = async (page: Page, url: string, retryCount: number = 20) => {
+        while (isOpeningUrl) {
+            console.log(`chrome.ts :: Chrome :: gotoForce= :: isOpeningUrl -> ${isOpeningUrl} :: Waiting...`)
+            await Utils.delay(1000)
+        }
+
+        isOpeningUrl = true
         if (retryCount < 0) {
             console.log(`Failed to navigate to ${url} after ${retryCount} retries.`)
 
-            // Crashing the process forcefully
-            // @ts-ignore
-            abcdefghijklmnopqrstuvwxyz = 0
-
+            if (Constants.SHOULD_CRASH_AFTER_URL_RETRY) {
+                // Crashing the process forcefully
+                // @ts-ignore
+                abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz = 0
+            }
+            isOpeningUrl = false
+            return
         }
+
         await Promise.all([
             page.goto(url, {
                 timeout: 120 * 1000,
                 waitUntil: 'load',
             }),
             page.waitForResponse((response) => response.ok(), { timeout: 8000 }),
-        ]).catch(() => {
-            this.gotoForce(page, url, retryCount - 1);
-        });
+        ])
+            .catch(async () => {
+                await page.waitForTimeout(Constants.defaultWaitMs)
+                this.gotoForce(page, url, retryCount - 1);
+            })
+            .then(() => {
+                isOpeningUrl = false
+            })
     };
 
     static async scrollDown(page: Page, nTimes: number = 10, wait: number = Constants.defaultWaitMs) {
