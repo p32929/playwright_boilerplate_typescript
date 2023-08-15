@@ -9,7 +9,11 @@ interface IBrowserOptions {
     sessionPath: string,
     timeout: number,
     browser: BrowserTypes,
-    mute: boolean
+    /*
+    In order to mute browser completely, use this:
+    https://addons.mozilla.org/en-US/firefox/addon/mute-sites-by-default/
+    https://chrome.google.com/webstore/detail/clever-mute/eadinjjkfelcokdlmoechclnmmmjnpdh
+    */
 }
 
 const defaultValues: IBrowserOptions = {
@@ -17,10 +21,9 @@ const defaultValues: IBrowserOptions = {
     sessionPath: `./data/sessions/`,
     timeout: 1000 * 60 * 5,
     browser: "firefox",
-    mute: true
 }
 
-let isOpeningUrl = false
+let openingUrl = ""
 
 //
 export class Chrome {
@@ -65,6 +68,7 @@ export class Chrome {
                     this.options.sessionPath, {
                     headless: Constants.IS_HEADLESS,
                     timeout: this.options.timeout,
+                    args: ["--mute-audio"]
                 })
 
                 this.context.setDefaultNavigationTimeout(this.options.timeout)
@@ -73,7 +77,8 @@ export class Chrome {
             else if (this.options.mode == "private") {
                 const browser = await this.getBrowser().launch({
                     headless: Constants.IS_HEADLESS,
-                    timeout: this.options.timeout
+                    timeout: this.options.timeout,
+                    args: ["--mute-audio"]
                 });
                 this.context = await browser.newContext()
 
@@ -289,48 +294,61 @@ export class Chrome {
         await page.waitForTimeout(Constants.defaultWaitMs)
     }
 
-    static gotoForce = async (page: Page, url: string, retryCount: number = 20) => {
-        const currentLocation = await page.evaluate(() => {
-            return window.location.href
-        })
+    static async gotoForce(page: Page, url: string, retryCount: number = 20) {
+        try {
+            const currentLocation = await page.evaluate(() => {
+                return window.location.href
+            })
 
-        if (currentLocation === url) {
-            await page.waitForTimeout(Constants.defaultWaitMs)
-            return
-        }
-
-        while (isOpeningUrl) {
-            console.log(`chrome.ts :: Chrome :: gotoForce= :: isOpeningUrl -> ${isOpeningUrl} :: Waiting...`)
-            await Utils.delay(1000)
-        }
-
-        isOpeningUrl = true
-        if (retryCount < 0) {
-            console.log(`Failed to navigate to ${url} after ${retryCount} retries.`)
-
-            if (Constants.SHOULD_CRASH_AFTER_URL_RETRY) {
-                // Crashing the process forcefully
-                // @ts-ignore
-                abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz = 0
-            }
-            isOpeningUrl = false
-            return
-        }
-
-        await Promise.all([
-            page.goto(url, {
-                timeout: 120 * 1000,
-                waitUntil: 'load',
-            }),
-            page.waitForResponse((response) => response.ok(), { timeout: 8000 }),
-        ])
-            .catch(async () => {
+            if (currentLocation === url) {
                 await page.waitForTimeout(Constants.defaultWaitMs)
-                this.gotoForce(page, url, retryCount - 1);
-            })
-            .then(() => {
-                isOpeningUrl = false
-            })
+                return
+            }
+
+            while (openingUrl !== "") {
+                console.log(`chrome.ts :: Chrome :: gotoForce= :: url -> ${url} , openingUrl -> ${openingUrl} :: Delaying...`)
+                await Utils.delay(2500)
+            }
+
+            const tryUrl = (): Promise<boolean> => {
+                return new Promise((resolve) => {
+                    Promise.all([
+                        page.goto(url, {
+                            timeout: 120 * 1000,
+                            waitUntil: 'load',
+                        }),
+                        page.waitForResponse((response) => response.ok(), { timeout: 8000 }),
+                    ])
+                        .then(() => {
+                            resolve(true)
+                        })
+                        .catch(async () => {
+                            resolve(false)
+                        })
+
+                })
+            }
+
+            openingUrl = url
+            for (var i = 0; i < retryCount; i++) {
+                const opened = await tryUrl()
+                console.log(`chrome.ts :: Chrome :: gotoForce= :: url -> ${url} , opened -> ${opened} , i -> ${i} `)
+
+                if (opened) {
+                    openingUrl = ""
+                    break
+                }
+                else {
+                    // await page.waitForTimeout(Constants.defaultWaitMs)
+                    console.log(`chrome.ts :: Chrome :: gotoForce= :: Retrying... :: url -> ${url} , opened -> ${opened} , i -> ${i} `)
+                    await Utils.delay(2500)
+                }
+            }
+        }
+        catch (e) {
+            console.log(`chrome.ts :: Chrome :: gotoForce= :: e -> ${e} `)
+            openingUrl = ""
+        }
     };
 
     static async scrollDown(page: Page, nTimes: number = 10, wait: number = Constants.defaultWaitMs) {

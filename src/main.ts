@@ -1,4 +1,6 @@
-import { Database } from "./utils/database";
+import { Chrome } from "./utils/chrome";
+import { Constants } from "./utils/constants";
+import { Question } from "./utils/question";
 import { Utils } from "./utils/utils";
 
 require('console-stamp')(console, '[HH:MM:ss.l]');
@@ -14,6 +16,18 @@ const main = async () => {
         // shuffle: true,
     })
     console.log(`main.ts :: main :: ff -> ${ff} `)
+
+    const chr = new Chrome({
+        browser: "firefox",
+        mode: "sessioned",
+    })
+    const page = await chr.getNewPage()
+    await page.goto(`https://www.youtube.com/`)
+    await page.waitForTimeout(Constants.defaultWaitMs)
+    // await page.close()
+    
+    await Question.ask("???")
+    await chr.destroy()
 
     console.log(`Done`)
 }
