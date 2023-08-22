@@ -294,7 +294,8 @@ export class Chrome {
         await page.waitForTimeout(Constants.defaultWaitMs)
     }
 
-    static async gotoForce(page: Page, url: string, retryCount: number = 20) {
+    static async gotoForce(page: Page, url: string) {
+        const retryCount = 30
         try {
             const currentLocation = await page.evaluate(() => {
                 return window.location.href
@@ -305,16 +306,17 @@ export class Chrome {
                 return
             }
 
+            console.log(`chrome.ts :: Chrome :: gotoForce= :: url -> ${url} , openingUrl -> ${openingUrl} :: Delaying...`)
             while (openingUrl !== "") {
-                console.log(`chrome.ts :: Chrome :: gotoForce= :: url -> ${url} , openingUrl -> ${openingUrl} :: Delaying...`)
-                await Utils.delay(2500)
+                await page.waitForTimeout(Constants.defaultWaitMs)
             }
+            console.log(`chrome.ts :: Chrome :: gotoForce= :: url -> ${url} , openingUrl -> ${openingUrl} :: Delay finished...`)
 
             const tryUrl = (): Promise<boolean> => {
                 return new Promise((resolve) => {
                     Promise.all([
                         page.goto(url, {
-                            timeout: 120 * 1000,
+                            timeout: 90 * 1000,
                             waitUntil: 'load',
                         }),
                         page.waitForResponse((response) => response.ok(), { timeout: 8000 }),
@@ -341,9 +343,12 @@ export class Chrome {
                 else {
                     // await page.waitForTimeout(Constants.defaultWaitMs)
                     console.log(`chrome.ts :: Chrome :: gotoForce= :: Retrying... :: url -> ${url} , opened -> ${opened} , i -> ${i} `)
-                    await Utils.delay(2500)
+                    await page.waitForTimeout(Constants.defaultWaitMs)
                 }
             }
+
+            console.log(`chrome.ts :: Chrome :: gotoForce= :: url -> ${url} , openingUrl -> ${openingUrl} :: Failed...`)
+            openingUrl = ""
         }
         catch (e) {
             console.log(`chrome.ts :: Chrome :: gotoForce= :: e -> ${e} `)
