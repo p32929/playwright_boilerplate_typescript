@@ -24,6 +24,7 @@ const defaultValues: IBrowserOptions = {
 }
 
 let openingUrl = ""
+let originalViewport = null
 
 //
 export class Chrome {
@@ -371,4 +372,29 @@ export class Chrome {
         })
         return currentLocation
     }
+
+    static async setIphoneViewport(page: Page) {
+        originalViewport = page.viewportSize()
+        await page.setViewportSize({
+            width: 390,
+            height: 844,
+        })
+
+        await page.reload()
+        await page.waitForTimeout(Constants.defaultWaitMs * 3)
+    }
+
+    static async resetViewport(page: Page) {
+        try {
+            await page.setViewportSize(originalViewport)
+        }
+        catch (e) {
+            //
+        }
+
+        await page.reload()
+        await page.waitForTimeout(Constants.defaultWaitMs * 3)
+    }
+
+
 }
