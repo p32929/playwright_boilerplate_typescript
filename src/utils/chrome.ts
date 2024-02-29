@@ -19,7 +19,7 @@ interface IBrowserOptions {
 const defaultValues: IBrowserOptions = {
     mode: "sessioned",
     sessionPath: `./data/sessions/`,
-    timeout: 1000 * 60 * 5,
+    timeout: Constants.defaultChromeTimeout,
     browser: "firefox",
     headless: false,
 }
@@ -27,9 +27,8 @@ const defaultValues: IBrowserOptions = {
 let openingUrl = ""
 let originalViewport = null
 
-const getRandomInt = (min: number = 0, max: number = Number.MAX_VALUE) => { // min and max included 
+const getRandomInt = (min: number = 0, max: number = Number.MAX_VALUE) => {
     const int = Math.floor(Math.random() * (max - min + 1) + min)
-    console.log(`Utils :: getRandomIntFromInterval :: int: ${int}`)
     return int
 }
 
@@ -66,7 +65,7 @@ export class Chrome {
 
         while (this.isInitting) {
             console.log(`chrome.ts :: Chrome :: getNewPage :: this.isInitting -> ${this.isInitting} `)
-            await delay(2000)
+            await delay(Constants.defaultShortWait)
         }
         console.log(`chrome.ts :: Chrome :: getNewPage :: this.isInitting -> ${this.isInitting} `)
 
@@ -90,7 +89,6 @@ export class Chrome {
                     timeout: this.options.timeout,
                 });
                 this.context = await browser.newContext({
-                    // userAgent: ua,
                     ignoreHTTPSErrors: true,
                 })
 
@@ -99,13 +97,12 @@ export class Chrome {
             }
 
             await this.context.addInitScript("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-
             this.isInitting = false
         }
 
         console.log(`chrome.ts :: Chrome :: getNewPage-1 :: this.tryingToOpenPages -> ${this.tryingToOpenPages} , this.openedPages -> ${this.openedPages} `)
         while (this.tryingToOpenPages !== this.openedPages) {
-            await delay(2000)
+            await delay(Constants.defaultShortWait)
             console.log(`chrome.ts :: Chrome :: getNewPage-1 :: this.tryingToOpenPages -> ${this.tryingToOpenPages} , this.openedPages -> ${this.openedPages} `)
         }
 
@@ -135,7 +132,7 @@ export class Chrome {
 
     static async downloadFile(page: Page, url: string, filePath: string, waitTimeout: number = Constants.defaultDownloadWaitMs): Promise<boolean> {
         console.log(`chrome.ts :: Chrome :: downloadFile :: url -> ${url} , filePath -> ${filePath} `)
-        return new Promise(async (resolve, reject) => {
+        return new Promise(async (resolve) => {
             try {
                 page.evaluate((link) => {
                     function download(url, filename) {
@@ -169,7 +166,7 @@ export class Chrome {
 
     static async downloadFileByButtonClick(page: Page, buttonSelector: string, filePath: string): Promise<boolean> {
         console.log(`chrome.ts :: Chrome :: downloadFileByButtonClick :: buttonSelector -> ${buttonSelector} , filePath -> ${filePath} `)
-        return new Promise(async (resolve, reject) => {
+        return new Promise(async (resolve) => {
             try {
                 const downloadPromise = page.waitForEvent('download');
                 await page.click(buttonSelector)
@@ -198,7 +195,7 @@ export class Chrome {
 
         await fileChooser.setFiles(fileLocations)
         await Chrome.waitForTimeout(page, {
-            maxTimeout: Constants.defaultMaxWaitMs * 3,
+            maxTimeout: Constants.defaultUploadWaitMs,
         })
     }
 
@@ -217,80 +214,8 @@ export class Chrome {
             await Chrome.waitForTimeout(page)
         }
         await Chrome.waitForTimeout(page, {
-            maxTimeout: Constants.defaultMaxWaitMs * 3,
+            maxTimeout: Constants.defaultUploadWaitMs,
         })
-    }
-
-    static async findAndClickByElementTagIfIncludes(page: Page, elementTag: string, includedText: string) {
-        console.log(`chrome.ts :: Chrome :: findAndClickByElementTagIfIncludes :: elementTag -> ${elementTag} , includedText -> ${includedText} `)
-        await page.evaluate((obj) => {
-            try {
-
-                var elems = document.getElementsByTagName(obj.elementTag)
-                for (var i = 0; i < elems.length; i++) {
-                    // @ts-ignore
-                    if (elems[i].innerText.toLowerCase().includes(obj.elementText.toLowerCase())) {
-                        // @ts-ignore
-                        elems[i]?.focus()
-                        // @ts-ignore
-                        elems[i]?.click()
-                        break
-                    }
-                }
-            } catch (e) {
-
-            }
-
-        }, { elementTag, elementText: includedText })
-        await Chrome.waitForTimeout(page)
-    }
-
-    static async findAndClickByElementTag(page: Page, elementTag: string, elementText: string) {
-        console.log(`chrome.ts :: Chrome :: findAndClickByElementTag :: elementTag -> ${elementTag} , elementText -> ${elementText} `)
-        const clicked = await page.evaluate((obj) => {
-            try {
-                var elems = document.getElementsByTagName(obj.elementTag)
-                for (var i = 0; i < elems.length; i++) {
-                    // @ts-ignore
-                    if (elems[i].innerText.toLowerCase() === obj.elementText.toLowerCase()) {
-                        // @ts-ignore
-                        elems[i]?.focus()
-                        // @ts-ignore
-                        elems[i]?.click()
-                        return true
-                    }
-                }
-            } catch (e) {
-
-                return false
-            }
-
-        }, { elementTag, elementText })
-        await Chrome.waitForTimeout(page)
-        return clicked
-    }
-
-    static async findAndClickByClassName(page: Page, className: string, elementText: string) {
-        console.log(`chrome.ts :: Chrome :: findAndClickByClassName :: className -> ${className} , elementText -> ${elementText} `)
-        await page.evaluate((obj) => {
-            try {
-                var elems = document.getElementsByClassName(obj.elementTag)
-                for (var i = 0; i < elems.length; i++) {
-                    // @ts-ignore
-                    if (elems[i].innerText.toLowerCase() === obj.elementText.toLowerCase()) {
-                        // @ts-ignore
-                        elems[i]?.focus()
-                        // @ts-ignore
-                        elems[i]?.click()
-                        break
-                    }
-                }
-            } catch (e) {
-
-            }
-
-        }, { elementTag: className, elementText })
-        await Chrome.waitForTimeout(page)
     }
 
     static async getCurrentHeightWidth(page: Page): Promise<{
@@ -316,7 +241,7 @@ export class Chrome {
     }
 
     static async gotoForce(page: Page, url: string) {
-        const retryCount = 30
+        const retryCount = Constants.maxGotoRetries
         try {
             const currentLocation = await page.evaluate(() => {
                 return window.location.href
@@ -369,6 +294,7 @@ export class Chrome {
     };
 
     static async scrollDown(page: Page, nTimes: number = 10, wait: number = Constants.defaultMaxWaitMs) {
+        console.log(`chrome.ts :: Chrome :: scrollDown :: nTimes -> ${nTimes} , wait -> ${wait} `)
         for (var i = 0; i < nTimes; i++) {
             await page.evaluate(() => {
                 window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
@@ -381,10 +307,12 @@ export class Chrome {
         const currentLocation = await page.evaluate(() => {
             return window.location.href
         })
+        console.log(`chrome.ts :: Chrome :: getCurrentPageUrl :: currentLocation :: ${currentLocation}`)
         return currentLocation
     }
 
     static async setIphoneViewport(page: Page) {
+        console.log(`chrome.ts :: Chrome :: setIphoneViewport :: `)
         originalViewport = page.viewportSize()
         await page.setViewportSize({
             width: 390,
@@ -416,17 +344,17 @@ export class Chrome {
             const element = await page.$(selector)
             await element.click({
                 timeout: Constants.defaultButtonClickTimeout,
-                delay: 500,
+                delay: Constants.defaultButtonClickDelay,
                 trial: true
             })
-            await page.waitForTimeout(100)
+            await Chrome.waitForTimeout(page)
 
             await element.click({
                 timeout: Constants.defaultButtonClickTimeout,
-                delay: 500,
+                delay: Constants.defaultButtonClickDelay,
                 force: options?.forceClick,
             })
-            await page.waitForTimeout(100)
+            await Chrome.waitForTimeout(page)
 
             console.log(`chrome.ts :: Chrome :: tryClick :: Success`)
             return true
@@ -441,8 +369,8 @@ export class Chrome {
         minTimeout?: number,
         maxTimeout?: number,
     }) {
-        const min = options.minTimeout ?? Constants.defaultMinWaitMs
-        const max = options.maxTimeout ?? Constants.defaultMinWaitMs
+        const min = options?.minTimeout ?? Constants.defaultMinWaitMs
+        const max = options?.maxTimeout ?? Constants.defaultMaxWaitMs
         const timeoutt = getRandomInt(min, max)
         console.log(`chrome.ts :: Chrome :: waitForTimeout :: timeoutt -> ${timeoutt} `)
         await page.waitForTimeout(timeoutt)
