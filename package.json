@@ -12,9 +12,9 @@
     "start": "nodemon ./src/main.ts"
   },
   "dependencies": {
-    "console-stamp": "^3.1.1",
-    "fjsondb": "^0.0.2",
-    "playwright": "^1.27.1",
-    "playwright-utils-fayazbinsalam": "^1.0.4"
+    "console-stamp": "latest",
+    "fjsondb": "latest",
+    "playwright": "latest",
+    "playwright-utils-fayazbinsalam": "latest"
   }
 }
