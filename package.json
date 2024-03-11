@@ -9,12 +9,13 @@
     "typescript": "^5.1.6"
   },
   "scripts": {
-    "start": "nodemon ./src/main.ts"
+    "start": "nodemon ./src/main.ts",
+    "setup": "nodemon ./src/setup.ts",
+    "login": "nodemon ./src/login.ts"
   },
   "dependencies": {
     "console-stamp": "latest",
     "fjsondb": "latest",
-    "playwright": "latest",
-    "playwright-utils-fayazbinsalam": "latest"
+    "playwright": "latest"
   }
 }

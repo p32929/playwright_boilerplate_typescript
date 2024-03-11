@@ -1,10 +1,10 @@
-import { Chrome } from "playwright-utils-fayazbinsalam";
+import { Chrome } from "./others/Chrome";
+import { Utils } from "./others/utils";
 
 require('console-stamp')(console, '[HH:MM:ss.l]');
 const main = async () => {
     console.log("Started")
-    
-    const chrome = new Chrome()
+    console.log(`ended`)
 }
 
 main()
