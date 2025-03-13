@@ -10,6 +10,7 @@
   },
   "scripts": {
     "start": "nodemon ./src/main.ts",
+    "start:prod": "xvfb-run --auto-servernum nodemon ./src/main.ts",
     "setup": "nodemon ./src/setup.ts",
     "login": "nodemon ./src/login.ts"
   },
