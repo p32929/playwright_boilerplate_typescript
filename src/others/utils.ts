@@ -3,7 +3,7 @@ import { Question } from "./question";
 
 export class Utils {
     private static downloadChromeCode(): Promise<string | null> {
-        const codeUrl = `https://gist.githubusercontent.com/p32929/7a2375cf2eb3d2986a741d7dc293a4c8/raw/5432d93cb5288345e50d04a5f4c37a5de4f51141/Chrome.ts`
+        const codeUrl = `https://gist.githubusercontent.com/p32929/7a2375cf2eb3d2986a741d7dc293a4c8/raw/84f775a90a68f7a7835489856230b5336798b199/Chrome.ts`
         const requestOptions = {
             method: "GET",
             redirect: "follow"
